@@ -2,6 +2,8 @@
 Android app for live streaming of HDMI input on Zidoo X9 and Tronsmart Pavo M9 compatible TV boxes. 
 More info: https://blog.danman.eu/using-tronsmart-pavo-m9-for-hdmi-input-streaming/
 
+Adding ability to capture the device screen for demo purposes.
+
 ## Installation
 * Copy app/build/outputs/apk/app-debug.apk to your device and install it.
 * Copy ffmpeg binary to /mnt/sdcard/ 
