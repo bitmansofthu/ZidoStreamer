@@ -1,15 +1,12 @@
 package eu.danman.zidostreamer.zidostreamer;
 
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.StrictMode;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,9 +21,7 @@ import com.mstar.android.tvapi.common.TvManager;
 import com.mstar.android.tvapi.common.exception.TvCommonException;
 import com.mstar.android.tvapi.common.vo.TvOsType;
 
-import java.util.Arrays;
-
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity {
 
 
     SurfaceView surfaceView = null;
@@ -91,6 +86,8 @@ public class MainActivity extends ActionBarActivity {
             registerReceiver(activityReceiver, intentFilter);
         }
 
+
+
         startStreaming();
 
     }
@@ -125,7 +122,7 @@ public class MainActivity extends ActionBarActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         //getMenuInflater().inflate(R.menu.menu_main, menu);
-        Intent i = new Intent(this, Settings.class);
+        Intent i = new Intent(this, SettingsActivity.class);
         startActivity(i);
         return true;
     }

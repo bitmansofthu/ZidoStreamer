@@ -16,16 +16,12 @@ import com.mstar.android.camera.MCamera;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 
 public class StreamService extends Service {
-
-    String myPath;
 
     String ffmpegBin;
 
@@ -39,20 +35,6 @@ public class StreamService extends Service {
         Intent intent = new Intent("ToStreamerActivity");
         intent.putExtra("log", log);
         sendBroadcast(intent);
-    }
-
-    public void copyFile(File src, File dst) throws IOException {
-        InputStream in = new FileInputStream(src);
-        OutputStream out = new FileOutputStream(dst);
-
-        // Transfer bytes from in to out
-        byte[] buf = new byte[1024];
-        int len;
-        while ((len = in.read(buf)) > 0) {
-            out.write(buf, 0, len);
-        }
-        in.close();
-        out.close();
     }
 
     /** A safe way to get an instance of the Camera object. */
@@ -84,39 +66,19 @@ public class StreamService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        //TODO do something
-
         settings = PreferenceManager.getDefaultSharedPreferences(this);
 
-        myPath = this.getApplicationContext().getFilesDir().getAbsolutePath();
-
-        ffmpegBin = myPath + "/ffmpeg";
-
         // copy ffmpeg from sdcard to data folder
-        File fmBin = new File(ffmpegBin);
-
-        if (!fmBin.exists()){
-
-            try {
-                copyFile(new File("/mnt/sdcard/ffmpeg"), new File(ffmpegBin));
-
-                fmBin = new File(ffmpegBin);
-                fmBin.setExecutable(true);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
+        File fmBin = new File(getFilesDir().getAbsolutePath(), "ffmpeg");
+        fmBin.setExecutable(true);
 
         // try cleanup first
         stopFFMPEG();
         releaseMediaRecorder();
         releaseCamera();
 
-
         //make a pipe containing a read and a write parcelfd
-        ParcelFileDescriptor[] fdPair = new ParcelFileDescriptor[0];
+        ParcelFileDescriptor[] fdPair;
         try {
             fdPair = ParcelFileDescriptor.createPipe();
         } catch (IOException e) {
@@ -242,16 +204,16 @@ public class StreamService extends Service {
         mMediaRecorder.setCamera(mCamera);
 
         // Step 2: Set sources
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+//        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
 
 
         // set TS
-        mMediaRecorder.setOutputFormat(8);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setAudioChannels(2);
-        mMediaRecorder.setAudioSamplingRate(44100);
-        mMediaRecorder.setAudioEncodingBitRate(audio_bitrate);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
+//        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+//        mMediaRecorder.setAudioChannels(2);
+//        mMediaRecorder.setAudioSamplingRate(44100);
+//        mMediaRecorder.setAudioEncodingBitRate(audio_bitrate);
 
         mMediaRecorder.setVideoSize(video_width, video_height);
         mMediaRecorder.setVideoFrameRate(video_framerate);
