@@ -16,4 +16,34 @@
         <item>4</item>
     </string-array>
 
+    <string-array name="listVideoBitrates">
+        <item>1024 kbps</item>
+        <item>512 kbps</item>
+        <item>256 kbps</item>
+        <item>128 kbps</item>
+    </string-array>
+
+    <string-array name="listVideoBitratesValues">
+        <item>1024</item>
+        <item>512</item>
+        <item>256</item>
+        <item>128</item>
+    </string-array>
+
+    <string-array name="listVideoFramerates">
+        <item>30 fps</item>
+        <item>25 fps</item>
+        <item>20 fps</item>
+        <item>15 fps</item>
+        <item>10 fps</item>
+    </string-array>
+
+    <string-array name="listVideoFramerateValues">
+        <item>30</item>
+        <item>25</item>
+        <item>20</item>
+        <item>15</item>
+        <item>10</item>
+    </string-array>
+
 </resources>

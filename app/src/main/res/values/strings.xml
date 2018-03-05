@@ -6,5 +6,4 @@
     <string name="action_start">Start</string>
     <string name="action_stop">Stop</string>
     <string name="title_activity_settings">Settings</string>
-    <string name="menu_test">Test FFMpeg</string>
 </resources>

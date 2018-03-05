@@ -194,7 +194,7 @@ public class FFmpegWrapper {
         ffmpegProcess = null;
     }
 
-    private boolean isProcessRunning(){
+    public boolean isProcessRunning(){
 
         try {
             ffmpegProcess.exitValue();
