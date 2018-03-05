@@ -28,7 +28,7 @@ public class FFmpegCommandBuilder {
             url = "udp://" + url;
         }
 
-        cmd.append(url);
+        cmd.append(' ').append(url);
 
         return this;
     }

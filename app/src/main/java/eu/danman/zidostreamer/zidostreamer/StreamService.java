@@ -1,5 +1,7 @@
 package eu.danman.zidostreamer.zidostreamer;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -13,9 +15,9 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 
 public class StreamService extends Service {
@@ -38,20 +40,8 @@ public class StreamService extends Service {
     private int mScreenDensity;
 
     public class LocalBinder extends Binder {
-        boolean configure(int resultCode, Intent resultData, int density) {
-            return StreamService.this.configure(resultCode, resultData, density);
-        }
-
-        boolean start() {
-            return StreamService.this.start();
-        }
-
-        void stop() {
-            StreamService.this.stop();
-        }
-
-        boolean isRunning() {
-            return StreamService.this.ffwrapper.isProcessRunning();
+        StreamService getService() {
+            return StreamService.this;
         }
     }
 
@@ -60,15 +50,20 @@ public class StreamService extends Service {
         return mBinder;
     }
 
-
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public void onCreate() {
+        super.onCreate();
+
         settings = PreferenceManager.getDefaultSharedPreferences(this);
 
         ffcmdbuilder = new FFmpegCommandBuilder();
         ffwrapper = new FFmpegWrapper(this);
 
         ffmpegAvailable = ffwrapper.checkFFmpeg();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
 
 //        // copy ffmpeg from sdcard to data folder
 //        File fmBin = new File(getFilesDir().getAbsolutePath(), "ffmpeg");
@@ -217,11 +212,11 @@ public class StreamService extends Service {
 //
 //        readerThread.start();
 
-        return Service.START_STICKY;
+        return Service.START_NOT_STICKY;
 
     }
 
-    private boolean configure(int resultCode, Intent resultData, int density) {
+    public boolean configure(int resultCode, Intent resultData, int density) {
         MediaProjectionManager projectionManager = (MediaProjectionManager) getSystemService
                 (Context.MEDIA_PROJECTION_SERVICE);
         mMediaProjection = projectionManager.getMediaProjection(resultCode, resultData);
@@ -231,10 +226,12 @@ public class StreamService extends Service {
         return mMediaProjection != null;
     }
 
-    private boolean start() {
+    public boolean start() {
         if (!ffmpegAvailable) {
             return false;
         }
+
+        ffcmdbuilder.setUrl(settings.getString("stream_url", ""));
 
         //make a pipe containing a read and a write parcelfd
         ParcelFileDescriptor[] fdPair;
@@ -251,10 +248,10 @@ public class StreamService extends Service {
         ParcelFileDescriptor writeFD = fdPair[1];
 
         try {
-            ffwrapper.launch(ffcmdbuilder.build(), new FileInputStream(readFD.getFileDescriptor()), new FFmpegWrapper.ProcessListener() {
+            ffwrapper.launch(ffcmdbuilder.build(), new ParcelFileDescriptor.AutoCloseInputStream(readFD), new FFmpegWrapper.ProcessListener() {
                 @Override
                 public void onProcessFinished(FFmpegWrapper wrapper) {
-
+                    teardown();
                 }
             });
         } catch (Exception e) {
@@ -274,47 +271,88 @@ public class StreamService extends Service {
 
 
         // set TS
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 //        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
 //        mMediaRecorder.setAudioChannels(2);
 //        mMediaRecorder.setAudioSamplingRate(44100);
-//        mMediaRecorder.setAudioEncodingBitRate(audio_bitrate);
+//        mMediaRecorder.setAudioEncodingBitRate(audio_bitrate);0
+
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
 
         mMediaRecorder.setVideoSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
         mMediaRecorder.setVideoFrameRate(video_framerate);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mMediaRecorder.setVideoEncodingBitRate(video_bitrate);
 
         // Step 4: Set output file
         mMediaRecorder.setOutputFile(writeFD.getFileDescriptor());
 
-        // create virtual display
-        if (mMediaProjection != null) {
-            mVirtualDisplay = mMediaProjection.createVirtualDisplay(
-                    "ZidoScreenCast",
-                    DISPLAY_WIDTH, DISPLAY_HEIGHT, mScreenDensity,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    mMediaRecorder.getSurface(), null, null);
-        }
-
         try {
             mMediaRecorder.prepare();
-            mMediaRecorder.start();
         } catch (Exception e) {
-            Log.w(getClass().getSimpleName(), "Failed to init mediarecorder", e);
+            Log.w(getClass().getSimpleName(), "Failed to prepare mediarecorder", e);
 
             return false;
         }
 
-        //startForeground();
+        // create virtual display
+        if (mMediaProjection != null) {
+            try {
+                mVirtualDisplay = mMediaProjection.createVirtualDisplay(
+                        "ZidoScreenCast",
+                        DISPLAY_WIDTH, DISPLAY_HEIGHT, mScreenDensity,
+                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                        mMediaRecorder.getSurface(), null, null);
+            } catch (Exception e) {
+                Log.w(getClass().getSimpleName(), "Failed to init virtual display", e);
+
+                teardown();
+
+                return false;
+            }
+        } else {
+            teardown();
+
+            return false;
+        }
+
+        try {
+            mMediaRecorder.start();
+        } catch (Exception e) {
+            Log.w(getClass().getSimpleName(), "Failed to start mediarecorder", e);
+
+            teardown();
+
+            return false;
+        }
+
+        startInForeground();
 
         return true;
     }
 
-    private void stop() {
+    public void stop() {
         stopForeground(true);
 
         teardown();
+    }
+
+    public boolean isRunning() {
+        return ffwrapper.isProcessRunning();
+    }
+
+    private void startInForeground() {
+        Intent notificationIntent = new Intent(this, SettingsActivity.class);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                notificationIntent, 0);
+
+        Notification notification = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Screen Cast")
+                .setContentText("Screen cast is in progress")
+                .setContentIntent(pendingIntent).build();
+
+        startForeground(StreamService.class.getName().hashCode(), notification);
     }
 
     private void teardown(){

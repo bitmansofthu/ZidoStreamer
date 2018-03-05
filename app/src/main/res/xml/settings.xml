@@ -11,13 +11,15 @@
 
         <ListPreference android:title="Video bitrate"
             android:key="video_bitrate"
-            android:defaultValue="512"
+            android:defaultValue="1"
+            android:summary="%s"
             android:entries="@array/listVideoBitrates"
             android:entryValues="@array/listVideoBitratesValues"/>
 
         <ListPreference android:title="Video framerate"
             android:key="video_framerate"
-            android:defaultValue="25"
+            android:defaultValue="1"
+            android:summary="%s"
             android:entries="@array/listVideoFramerates"
             android:entryValues="@array/listVideoFramerateValues"/>
 
